@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>內部員工點餐系統（日期排程版）</title>
+    <title>內部員工點餐系統（月曆排程版）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
@@ -23,7 +23,7 @@
         .header-btns { display: flex; gap: 10px; }
         .nav-btn { background: rgba(255,255,255,0.2); border: 1px solid rgba(255,255,255,0.4); color: white; padding: 6px 12px; border-radius: 20px; cursor: pointer; font-size: 0.85rem; position: relative; }
         .badge { position: absolute; top: -5px; right: -5px; background: #ffb703; color: #000; font-weight: bold; font-size: 0.7rem; width: 18px; height: 18px; border-radius: 50%; display: flex; align-items: center; justify-content: center; }
-        .container { max-width: 800px; margin: 0 auto; padding: 15px; }
+        .container { max-width: 900px; margin: 0 auto; padding: 15px; }
         .store-info { background: var(--card-bg); padding: 15px; border-radius: 12px; margin-bottom: 15px; box-shadow: 0 2px 5px rgba(0,0,0,0.05); }
         .store-title { font-size: 1.1rem; font-weight: bold; color: var(--primary); }
         .menu-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 15px; }
@@ -33,13 +33,13 @@
         .menu-details { padding: 10px; flex: 1; display: flex; flex-direction: column; justify-content: space-between; }
         .menu-name { font-weight: bold; font-size: 0.95rem; margin-bottom: 5px; }
         .menu-price { color: var(--primary); font-weight: bold; font-size: 1rem; }
-        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: calc(100% - 30px); max-width: 770px; background: var(--text); color: white; padding: 12px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; z-index: 90; }
+        .cart-bar { position: fixed; bottom: 15px; left: 50%; transform: translateX(-50%); width: calc(100% - 30px); max-width: 870px; background: var(--text); color: white; padding: 12px 20px; border-radius: 30px; display: flex; justify-content: space-between; align-items: center; box-shadow: 0 4px 15px rgba(0,0,0,0.2); cursor: pointer; z-index: 90; }
         .checkout-btn { background: var(--primary); color: white; border: none; padding: 8px 18px; border-radius: 20px; font-weight: bold; font-size: 0.9rem; }
-        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: flex-end; }
-        .modal-content { background: white; width: 100%; max-width: 600px; border-radius: 20px 20px 0 0; padding: 20px; max-height: 85vh; overflow-y: auto; }
+        .modal { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; justify-content: center; align-items: center; }
+        .modal-content { background: white; width: 90%; max-width: 550px; border-radius: 16px; padding: 20px; max-height: 85vh; overflow-y: auto; }
         .modal-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
         .close-btn { background: #eee; border: none; width: 30px; height: 30px; border-radius: 50%; font-size: 1.1rem; cursor: pointer; }
-        .opt-btn { display: inline-block; border: 1px solid var(--border); padding: 8px 16px; border-radius: 8px; margin: 5px 5px 5px 0; cursor: pointer; font-size: 0.9rem; }
+        .opt-btn { display: inline-block; border: 1px solid var(--border); padding: 6px 12px; border-radius: 8px; margin: 5px 5px 5px 0; cursor: pointer; font-size: 0.85rem; }
         .opt-btn.active { border-color: var(--primary); color: var(--primary); background: #fff5f5; }
         .qty-ctrl { display: flex; align-items: center; gap: 10px; margin: 15px 0; }
         .qty-btn { width: 32px; height: 32px; border-radius: 50%; border: 1px solid #ccc; background: white; font-size: 1.2rem; cursor: pointer; }
@@ -48,11 +48,23 @@
         .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: #2a9d8f; color: white; }
         .btn-danger { background: #e63946; color: white; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
         th { background: #f1f3f5; }
-        #qrcode { display: flex; justify-content: center; margin: 15px 0; }
+
+        /* 月曆專用 CSS 樣式 */
+        .calendar-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px; }
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; background: #e0e0e0; border: 1px solid #ccc; border-radius: 8px; overflow: hidden; }
+        .calendar-day-head { background: #333; color: white; text-align: center; padding: 8px 0; font-size: 0.85rem; font-weight: bold; }
+        .calendar-cell { background: white; min-height: 85px; padding: 6px; position: relative; cursor: pointer; transition: background 0.2s; display: flex; flex-direction: column; justify-content: space-between; }
+        .calendar-cell:hover { background: #f0f7ff; }
+        .calendar-cell.other-month { background: #f9f9f9; opacity: 0.4; }
+        .calendar-cell.today { background: #fff0f0; }
+        .day-num { font-weight: bold; font-size: 0.85rem; color: #555; }
+        .today .day-num { color: var(--primary); }
+        .event-tag { background: #4a90e2; color: white; font-size: 0.72rem; padding: 3px 5px; border-radius: 4px; margin-top: 4px; line-height: 1.2; word-break: break-all; box-shadow: 0 1px 3px rgba(0,0,0,0.15); }
     </style>
 </head>
 <body>
@@ -62,7 +74,7 @@
         <div class="header-btns">
             <button class="nav-btn" onclick="toggleView('user')">點餐頁面</button>
             <button class="nav-btn" onclick="openCartModal()">🛒 <span id="cartBadge" class="badge">0</span></button>
-            <button class="nav-btn" onclick="toggleView('admin')">後台日曆排程</button>
+            <button class="nav-btn" onclick="toggleView('admin')">後台月曆排程</button>
         </div>
     </header>
 
@@ -85,36 +97,59 @@
             </div>
         </div>
 
-        <!-- 後台日曆排程維護 -->
+        <!-- 後台月曆排程維護 -->
         <div id="adminView" class="admin-section">
-            <h2>📅 日曆式便當排程維護</h2>
-            <p style="font-size:0.85rem; color:#666; margin: 5px 0 15px 0;">您可以提前選定特定日期，安排當天的餐廳與便當菜單，同仁掃碼時會自動顯示當日排程！</p>
-            
-            <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px;">
-                <div class="form-group">
-                    <label><b>選擇要排程的日期：</b></label>
-                    <input type="date" id="scheduleDate" class="form-control" onchange="loadScheduleForDate()">
+            <div class="calendar-header">
+                <h2>📅 月曆排程維護管理</h2>
+                <div>
+                    <button class="btn btn-primary" onclick="changeMonth(-1)">上一月</button>
+                    <span id="calendarMonthTitle" style="font-weight:bold; font-size:1.1rem; margin:0 12px;">2026年12月</span>
+                    <button class="btn btn-primary" onclick="changeMonth(1)">下一月</button>
                 </div>
-                <div class="form-group">
-                    <label><b>當日餐廳/主題名稱：</b></label>
-                    <input type="text" id="scheduleStore" class="form-control" placeholder="例: 梁社漢排骨（林園店）">
+            </div>
+            <p style="font-size:0.85rem; color:#666; margin-bottom: 12px;">點擊月曆上<b>任意日期方格</b>，即可開啟彈窗新增或編輯當天的便當主題與菜單！</p>
+
+            <!-- 月曆區域 -->
+            <div class="calendar-grid" id="calendarGrid"></div>
+
+            <hr style="margin:25px 0; border:0; border-top:1px solid #eee;">
+
+            <!-- 每日訂單明細與 Excel 匯出 -->
+            <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:10px;">
+                <h3>📦 訂購明細清單與報表</h3>
+                <div style="display:flex; gap:10px; align-items:center;">
+                    <input type="date" id="viewOrderDate" class="form-control" style="width:auto;" onchange="renderSummary()">
+                    <button class="btn btn-success" onclick="exportToExcel()">📥 匯出 Excel</button>
+                    <button class="btn btn-danger" onclick="clearSelectedDateOrders()">清空選定日訂單</button>
                 </div>
-                <div class="form-group">
-                    <label><b>當日便當品項清單（格式：名稱, 價格, 圖片網址）：</b></label>
-                    <textarea id="scheduleItemsText" class="form-control" rows="5" placeholder="炸排骨便當, 120, https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&#10;炸雞腿便當, 135, https://images.unsplash.com/photo-1562967914-608f82629710?w=300"></textarea>
-                    <small style="color:#666;">每行輸入一個便當，用逗號分隔「名稱、價格、圖片網址」。</small>
-                </div>
-                <button class="btn btn-primary" onclick="saveDateSchedule()">💾 儲存此日排程</button>
             </div>
 
-            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-            <h3>📦 今日訂單統計彙整</h3>
-            <button class="btn btn-danger" style="float:right; margin-bottom:10px;" onclick="clearTodayOrders()">清空今日訂單</button>
-            <div id="summaryArea">無訂單資料</div>
-            
-            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+            <div id="summaryArea" style="margin-top:15px;">無訂單資料</div>
+
+            <hr style="margin:25px 0; border:0; border-top:1px solid #eee;">
             <h3>🔗 點餐專屬 QR Code</h3>
             <div id="qrcode"></div>
+        </div>
+    </div>
+
+    <!-- 點擊月曆日期的編輯彈窗 -->
+    <div class="modal" id="editScheduleModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="editModalDateTitle">編輯 2026-12-01 便當主題</h3>
+                <button class="close-btn" onclick="closeModal('editScheduleModal')">&times;</button>
+            </div>
+            <input type="hidden" id="modalTargetDate">
+            <div class="form-group">
+                <label><b>當日餐廳 / 主題名稱：</b></label>
+                <input type="text" id="modalStoreName" class="form-control" placeholder="例: 梁社漢排骨 / 美濃拔蘿蔔便當">
+            </div>
+            <div class="form-group">
+                <label><b>便當品項清單（格式：名稱, 價格, 圖片網址）：</b></label>
+                <textarea id="modalItemsText" class="form-control" rows="5" placeholder="炸排骨便當, 120, https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&#10;炸雞腿便當, 135, https://images.unsplash.com/photo-1562967914-608f82629710?w=300"></textarea>
+                <small style="color:#666;">每行輸入一個便當，半形逗號分隔：<b>品項名稱, 價格, 圖片網址</b></small>
+            </div>
+            <button class="btn btn-primary" style="width:100%; padding:10px; margin-top:5px;" onclick="saveModalSchedule()">💾 儲存並發布</button>
         </div>
     </div>
 
@@ -131,7 +166,7 @@
             <div style="font-weight:bold; font-size:1.2rem; color:var(--primary); margin-bottom:10px;" id="modalPrice">$0</div>
             
             <div style="margin-bottom:15px;">
-                <label style="font-weight:bold; font-size:0.9rem;">飯量/客製選項：</label><br>
+                <label style="font-weight:bold; font-size:0.9rem;">客製選項：</label><br>
                 <div id="modalOptions">
                     <span class="opt-btn active" onclick="selectOpt(this, '正常')">正常</span>
                     <span class="opt-btn" onclick="selectOpt(this, '飯少')">飯少</span>
@@ -164,13 +199,9 @@
                 <label>姓名 / 工號（必填）：</label>
                 <input type="text" id="userName" class="form-control" placeholder="例: 王小明 / A1234">
             </div>
-            <div class="form-group">
-                <label>部門（必填）：</label>
-                <input type="text" id="userDept" class="form-control" placeholder="例: 製造部 / 系統課">
-            </div>
 
             <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem; margin: 15px 0;">
-                <span>總計：預估金額</span>
+                <span>總計：</span>
                 <span id="cartModalTotal" style="color:var(--primary);">$0</span>
             </div>
 
@@ -179,10 +210,12 @@
     </div>
 
     <script>
-        // 取得今天的 YYYY-MM-DD 格式
-        const todayStr = new Date().toISOString().split('T')[0];
+        const todayObj = new Date();
+        const todayStr = todayObj.toISOString().split('T')[0];
         
-        // 從 LocalStorage 載入排程與訂單
+        let currentCalYear = todayObj.getFullYear();
+        let currentCalMonth = todayObj.getMonth(); // 0 - 11
+
         let schedules = JSON.parse(localStorage.getItem('lunch_schedules')) || {};
         let orders = JSON.parse(localStorage.getItem('lunch_orders')) || [];
         let cart = [];
@@ -190,7 +223,6 @@
         let currentQty = 1;
         let selectedOpt = "正常";
 
-        // 預設若該日無排程的預設便當
         const defaultSchedule = {
             store: "精選便當特約店",
             items: [
@@ -201,15 +233,14 @@
             ]
         };
 
-        // 取得今天實際應顯示的菜單
         const activeSchedule = schedules[todayStr] || defaultSchedule;
 
         function init() {
             document.getElementById('currentStoreName').innerText = activeSchedule.store;
-            document.getElementById('todayDateDesc').innerText = `今天是 ${todayStr}，已自動載入今日排程便當`;
-            document.getElementById('scheduleDate').value = todayStr;
-            loadScheduleForDate();
+            document.getElementById('todayDateDesc').innerText = `今天是 ${todayStr}，已載入今日排程便當`;
+            document.getElementById('viewOrderDate').value = todayStr;
             renderMenu();
+            renderCalendar();
             renderSummary();
         }
 
@@ -218,8 +249,10 @@
                 document.getElementById('userView').style.display = 'none';
                 document.getElementById('cartBar').style.display = 'none';
                 document.getElementById('adminView').style.display = 'block';
-                document.getElementById('headerTitle').innerText = "點餐系統 - 日曆排程後台";
+                document.getElementById('headerTitle').innerText = "點餐系統 - 月曆排程後台";
                 generateQRCode();
+                renderCalendar();
+                renderSummary();
             } else {
                 document.getElementById('userView').style.display = 'block';
                 document.getElementById('adminView').style.display = 'none';
@@ -228,22 +261,81 @@
             }
         }
 
-        function loadScheduleForDate() {
-            const dateVal = document.getElementById('scheduleDate').value;
-            const target = schedules[dateVal] || defaultSchedule;
-            document.getElementById('scheduleStore').value = target.store;
-            
-            let textVal = target.items.map(i => `${i.name}, ${i.price}, ${i.img}`).join('\n');
-            document.getElementById('scheduleItemsText').value = textVal;
+        // 月曆繪製邏輯
+        function renderCalendar() {
+            const grid = document.getElementById('calendarGrid');
+            grid.innerHTML = "";
+
+            document.getElementById('calendarMonthTitle').innerText = `${currentCalYear}年 ${currentCalMonth + 1}月`;
+
+            const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
+            dayNames.forEach(d => {
+                grid.innerHTML += `<div class="calendar-day-head">${d}</div>`;
+            });
+
+            const firstDay = new Date(currentCalYear, currentCalMonth, 1).getDay();
+            const daysInMonth = new Date(currentCalYear, currentCalMonth + 1, 0).getDate();
+            const prevMonthDays = new Date(currentCalYear, currentCalMonth, 0).getDate();
+
+            // 上個月填空格
+            for (let i = firstDay - 1; i >= 0; i--) {
+                grid.innerHTML += `<div class="calendar-cell other-month"><span class="day-num">${prevMonthDays - i}</span></div>`;
+            }
+
+            // 當月日期
+            for (let d = 1; d <= daysInMonth; d++) {
+                const monthPad = String(currentCalMonth + 1).padStart(2, '0');
+                const dayPad = String(d).padStart(2, '0');
+                const dateKey = `${currentCalYear}-${monthPad}-${dayPad}`;
+
+                const isToday = dateKey === todayStr ? 'today' : '';
+                const schedule = schedules[dateKey];
+                let tagHtml = "";
+                if (schedule && schedule.store) {
+                    tagHtml = `<div class="event-tag">${schedule.store}</div>`;
+                }
+
+                grid.innerHTML += `
+                    <div class="calendar-cell ${isToday}" onclick="openEditModalForDate('${dateKey}')">
+                        <span class="day-num">${d}</span>
+                        ${tagHtml}
+                    </div>
+                `;
+            }
         }
 
-        function saveDateSchedule() {
-            const dateVal = document.getElementById('scheduleDate').value;
-            const storeVal = document.getElementById('scheduleStore').value.trim();
-            const rawText = document.getElementById('scheduleItemsText').value.trim();
+        function changeMonth(delta) {
+            currentCalMonth += delta;
+            if (currentCalMonth > 11) {
+                currentCalMonth = 0;
+                currentCalYear++;
+            } else if (currentCalMonth < 0) {
+                currentCalMonth = 11;
+                currentCalYear--;
+            }
+            renderCalendar();
+        }
 
-            if (!dateVal || !storeVal) {
-                alert("請填寫日期與餐廳名稱！");
+        function openEditModalForDate(dateKey) {
+            document.getElementById('modalTargetDate').value = dateKey;
+            document.getElementById('editModalDateTitle').innerText = `編輯 ${dateKey} 便當主題`;
+
+            const schedule = schedules[dateKey] || defaultSchedule;
+            document.getElementById('modalStoreName').value = schedule.store;
+
+            let textVal = schedule.items ? schedule.items.map(i => `${i.name}, ${i.price}, ${i.img}`).join('\n') : "";
+            document.getElementById('modalItemsText').value = textVal;
+
+            document.getElementById('editScheduleModal').style.display = 'flex';
+        }
+
+        function saveModalSchedule() {
+            const dateKey = document.getElementById('modalTargetDate').value;
+            const storeVal = document.getElementById('modalStoreName').value.trim();
+            const rawText = document.getElementById('modalItemsText').value.trim();
+
+            if (!storeVal) {
+                alert("請填寫餐廳/主題名稱！");
                 return;
             }
 
@@ -260,10 +352,13 @@
                 }
             });
 
-            schedules[dateVal] = { store: storeVal, items: items };
+            schedules[dateKey] = { store: storeVal, items: items };
             localStorage.setItem('lunch_schedules', JSON.stringify(schedules));
-            alert(`成功儲存 ${dateVal} 的便當排程！`);
-            location.reload(); // 重新整理以更新今日畫面
+
+            closeModal('editScheduleModal');
+            renderCalendar();
+            alert(`已順利儲存 ${dateKey} 的便當主題排程！`);
+            if (dateKey === todayStr) location.reload();
         }
 
         function renderMenu() {
@@ -364,16 +459,15 @@
 
         function submitOrder() {
             const name = document.getElementById('userName').value.trim();
-            const dept = document.getElementById('userDept').value.trim();
 
-            if (!name || !dept) { alert("請填寫姓名與部門！"); return; }
+            if (!name) { alert("請填寫姓名/工號！"); return; }
             if (cart.length === 0) { alert("購物車內無品項！"); return; }
 
             const order = {
                 id: Date.now(),
                 date: todayStr,
                 time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
-                name, dept,
+                name,
                 items: [...cart],
                 total: cart.reduce((sum, item) => sum + item.subtotal, 0)
             };
@@ -385,49 +479,77 @@
             updateCartBar();
             closeModal('cartModal');
             alert("訂單已順利送出！");
-            renderSummary();
         }
 
         function closeModal(id) { document.getElementById(id).style.display = 'none'; }
 
         function renderSummary() {
+            const targetDate = document.getElementById('viewOrderDate').value || todayStr;
             const area = document.getElementById('summaryArea');
-            // 只篩選出今天的訂單
-            const todayOrders = orders.filter(o => o.date === todayStr);
+            const targetOrders = orders.filter(o => o.date === targetDate);
 
-            if (todayOrders.length === 0) {
-                area.innerHTML = `<p style='color:#888;'>今日 (${todayStr}) 尚無任何訂單紀錄</p>`;
+            if (targetOrders.length === 0) {
+                area.innerHTML = `<p style='color:#888; text-align:center; padding:15px;'>日期 ${targetDate} 尚無任何訂購紀錄</p>`;
                 return;
             }
 
-            let summaryHtml = `<table><thead><tr><th>訂購者/部門</th><th>點餐明細</th><th>總金額</th><th>時間</th></tr></thead><tbody>`;
+            let summaryHtml = `<table><thead><tr><th>訂購者</th><th>點餐明細</th><th>總金額</th><th>訂購時間</th></tr></thead><tbody>`;
             let itemCounts = {};
             let grandTotal = 0;
 
-            todayOrders.forEach(ord => {
+            targetOrders.forEach(ord => {
                 grandTotal += ord.total;
                 let details = ord.items.map(i => {
                     const key = `${i.name} (${i.opt})`;
                     itemCounts[key] = (itemCounts[key] || 0) + i.qty;
                     return `${i.name} [${i.opt}] x${i.qty}`;
                 }).join('<br>');
-                summaryHtml += `<tr><td><b>${ord.name}</b><br><small>${ord.dept}</small></td><td>${details}</td><td>$${ord.total}</td><td>${ord.time}</td></tr>`;
+                summaryHtml += `<tr><td><b>${ord.name}</b></td><td>${details}</td><td>$${ord.total}</td><td>${ord.time}</td></tr>`;
             });
             summaryHtml += `</tbody></table>`;
 
-            let countHtml = `<h4>📦 今日 (${todayStr}) 餐點總匯整：</h4><ul style="margin:10px 0 15px 20px;">`;
+            let countHtml = `<h4>📦 ${targetDate} 餐點總彙整：</h4><ul style="margin:10px 0 15px 20px;">`;
             for (let name in itemCounts) { countHtml += `<li><b>${name}</b>： ${itemCounts[name]} 份</li>`; }
-            countHtml += `</ul><div style="font-size:1.1rem; font-weight:bold; color:var(--primary);">今日訂單總金額：$${grandTotal}</div><br>`;
+            countHtml += `</ul><div style="font-size:1.1rem; font-weight:bold; color:var(--primary);">總計金額：$${grandTotal}</div><br>`;
 
             area.innerHTML = countHtml + summaryHtml;
         }
 
-        function clearTodayOrders() {
-            if (confirm(`確定要清空今天的訂單紀錄嗎？`)) {
-                orders = orders.filter(o => o.date !== todayStr);
+        function clearSelectedDateOrders() {
+            const targetDate = document.getElementById('viewOrderDate').value;
+            if (confirm(`確定要清空 ${targetDate} 的訂單紀錄嗎？`)) {
+                orders = orders.filter(o => o.date !== targetDate);
                 localStorage.setItem('lunch_orders', JSON.stringify(orders));
                 renderSummary();
             }
+        }
+
+        function exportToExcel() {
+            const targetDate = document.getElementById('viewOrderDate').value || todayStr;
+            const targetOrders = orders.filter(o => o.date === targetDate);
+
+            if (targetOrders.length === 0) {
+                alert(`${targetDate} 沒有訂單可以匯出！`);
+                return;
+            }
+
+            let csvContent = "\uFEFF";
+            csvContent += "日期,訂購者,品項,選項,單價,數量,小計,訂購時間\n";
+
+            targetOrders.forEach(ord => {
+                ord.items.forEach(item => {
+                    csvContent += `"${ord.date}","${ord.name}","${item.name}","${item.opt}",${item.price},${item.qty},${item.subtotal},"${ord.time}"\n`;
+                });
+            });
+
+            const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+            const link = document.createElement("a");
+            const url = URL.createObjectURL(blob);
+            link.setAttribute("href", url);
+            link.setAttribute("download", `便當訂購明細_${targetDate}.csv`);
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
         }
 
         function generateQRCode() {
