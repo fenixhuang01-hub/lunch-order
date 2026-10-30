@@ -1,0 +1,931 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>企業內部員工便當點餐系統</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Generator JS -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        brand: {
+                            50: '#fff7ed',
+                            100: '#ffedd5',
+                            500: '#f97316',
+                            600: '#ea580c',
+                            700: '#c2410c',
+                            danger: '#dc2626',
+                            primary: '#1d4ed8'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, "Noto Sans", sans-serif;
+            background-color: #f8fafc;
+        }
+        .hide-scrollbar::-webkit-scrollbar {
+            display: none;
+        }
+        .hide-scrollbar {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+    </style>
+</head>
+<body class="min-h-screen pb-20 md:pb-6 text-gray-800">
+
+    <!-- 頂部導覽列 Header -->
+    <header class="bg-gradient-to-r from-amber-500 via-orange-500 to-red-500 text-white shadow-md sticky top-0 z-30">
+        <div class="max-w-6xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <div class="bg-white p-2 rounded-lg text-orange-600 font-bold text-xl shadow">
+                    <i class="fa-solid font-black"> Liang </i>
+                </div>
+                <div>
+                <h1 class="text-xl font-bold tracking-wide">梁社漢排骨 <span class="text-xs bg-red-700 text-amber-200 px-2 py-0.5 rounded-full ml-1">員工便當點餐</span></h1>
+                <p class="text-xs text-orange-100 flex items-center">
+                    <i class="fa-solid fa-location-dot mr-1"></i> 高雄林園店 (內部便當線上預訂)
+                </p>
+            </div>
+        </div>
+        <!-- 頂部右側切換按鈕 -->
+        <div class="flex items-center space-x-2">
+            <button onclick="openCartModal()" class="relative bg-white/20 hover:bg-white/30 text-white p-2 px-3 rounded-lg transition flex items-center text-sm font-medium">
+                <i class="fa-solid fa-cart-shopping mr-1"></i> 購物車
+                <span id="cartBadge" class="hidden absolute -top-1.5 -right-1.5 bg-red-600 text-white text-xs font-bold rounded-full h-5 w-5 flex items-center justify-center border-2 border-orange-500">0</span>
+            </button>
+            <button onclick="toggleMode()" class="bg-black/30 hover:bg-black/40 text-white p-2 px-3 rounded-lg transition text-sm font-medium flex items-center">
+                <i class="fa-solid fa-gear mr-1"></i> <span id="modeText">後台管理</span>
+            </button>
+        </div>
+        </div>
+    </header>
+
+    <!-- ========================================== -->
+    <!-- 1. 前台員工點餐介面 (User Ordering View) -->
+    <!-- ========================================== -->
+    <main id="userView" class="max-w-6xl mx-auto px-3 py-4">
+        <!-- 頂部便當專區提示標籤 -->
+        <div class="bg-orange-100 border-l-4 border-orange-500 p-3 mb-4 rounded-r-xl shadow-sm flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+                <i class="fa-solid fa-bento-box text-orange-600 text-lg"></i>
+                <span class="text-sm font-bold text-orange-900">今日精選便當專區 (供內部員工點餐訂購)</span>
+            </div>
+            <span class="text-xs bg-orange-200 text-orange-800 px-2 py-1 rounded-md font-semibold">午餐訂購</span>
+        </div>
+
+        <!-- 菜單便當列表網格 -->
+        <div>
+            <div id="menuGrid" class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4">
+                <!-- 由 JS 動態注入便當卡片 -->
+            </div>
+        </div>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 2. 後台管理維護介面 (Admin View) -->
+    <!-- ========================================== -->
+    <main id="adminView" class="max-w-6xl mx-auto px-4 py-6 hidden">
+        <!-- 後台功能 Tab -->
+        <div class="flex border-b border-gray-300 mb-6 bg-white rounded-t-xl p-2 shadow-sm">
+            <button onclick="switchAdminTab('orders')" id="tabBtn-orders" class="flex-1 py-2.5 font-bold text-center border-b-2 border-orange-500 text-orange-600 transition flex items-center justify-center">
+                <i class="fa-solid fa-chart-line mr-2"></i> 今日訂單與便當統計
+            </button>
+            <button onclick="switchAdminTab('menu')" id="tabBtn-menu" class="flex-1 py-2.5 font-bold text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition flex items-center justify-center">
+                <i class="fa-solid fa-box-archive mr-2"></i> 便當品項維護
+            </button>
+            <button onclick="switchAdminTab('qrcode')" id="tabBtn-qrcode" class="flex-1 py-2.5 font-bold text-center border-b-2 border-transparent text-gray-500 hover:text-gray-700 transition flex items-center justify-center">
+                <i class="fa-solid fa-qrcode mr-2"></i> 點餐 QR Code
+            </button>
+        </div>
+
+        <!-- 後台子頁面 1: 今日訂單統計 -->
+        <section id="adminTab-orders" class="space-y-6">
+            <!-- 數據總覽 Dashboard Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">今日訂單數</p>
+                        <p id="statTotalOrders" class="text-3xl font-extrabold text-gray-800 mt-1">0 筆</p>
+                    </div>
+                    <div class="w-12 h-12 bg-orange-100 text-orange-600 rounded-full flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-receipt"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">今日總金額</p>
+                        <p id="statTotalAmount" class="text-3xl font-extrabold text-emerald-600 mt-1">$0</p>
+                    </div>
+                    <div class="w-12 h-12 bg-emerald-100 text-emerald-600 rounded-full flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-sack-dollar"></i>
+                    </div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-gray-100 shadow-sm flex items-center justify-between">
+                    <div>
+                        <p class="text-sm font-medium text-gray-500">便當總數量</p>
+                        <p id="statTotalItems" class="text-3xl font-extrabold text-blue-600 mt-1">0 個</p>
+                    </div>
+                    <div class="w-12 h-12 bg-blue-100 text-blue-600 rounded-full flex items-center justify-center text-xl">
+                        <i class="fa-solid fa-box"></i>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 熱門便當統計匯總 -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-5">
+                <h3 class="font-bold text-lg text-gray-800 mb-3 flex items-center">
+                    <i class="fa-solid fa-fire text-orange-500 mr-2"></i> 今日各式便當統計匯總 (向店家報單參考)
+                </h3>
+                <div id="itemSummaryList" class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 text-sm">
+                    <!-- JS 動態繪製便當總數 -->
+                </div>
+            </div>
+
+            <!-- 訂單明細清單 Table -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                    <h3 class="font-bold text-gray-800 flex items-center">
+                        <i class="fa-solid fa-list-check text-gray-600 mr-2"></i> 員工訂購明細
+                    </h3>
+                    <button onclick="clearAllOrders()" class="text-xs bg-red-100 hover:bg-red-200 text-red-700 px-3 py-1.5 rounded-md transition">
+                        <i class="fa-solid fa-trash mr-1"></i> 清空今日數據
+                    </button>
+                </div>
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                                <th class="py-3 px-4">時間</th>
+                                <th class="py-3 px-4">工號/姓名</th>
+                                <th class="py-3 px-4">部門</th>
+                                <th class="py-3 px-4">訂購便當內容與備註</th>
+                                <th class="py-3 px-4 text-right">金額</th>
+                            </tr>
+                        </thead>
+                        <tbody id="ordersTableBody" class="divide-y divide-gray-200">
+                            <!-- JS 動態繪製訂單列 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 後台子頁面 2: 便當菜單維護 -->
+        <section id="adminTab-menu" class="hidden space-y-4">
+            <div class="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm border border-gray-200">
+                <p class="text-sm text-gray-600">在此自由新增、編輯或刪除便當品項資料與照片網址。</p>
+                <button onclick="openMenuEditModal()" class="bg-orange-600 hover:bg-orange-700 text-white font-bold px-4 py-2 rounded-lg text-sm transition shadow flex items-center">
+                    <i class="fa-solid fa-plus mr-1.5"></i> 新增便當品項
+                </button>
+            </div>
+
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left text-sm">
+                        <thead class="bg-gray-100 text-gray-600 uppercase text-xs">
+                            <tr>
+                                <th class="py-3 px-4">圖片</th>
+                                <th class="py-3 px-4">便當名稱</th>
+                                <th class="py-3 px-4">價格</th>
+                                <th class="py-3 px-4">預設客製選項</th>
+                                <th class="py-3 px-4 text-center">操作</th>
+                            </tr>
+                        </thead>
+                        <tbody id="adminMenuTableBody" class="divide-y divide-gray-200">
+                            <!-- JS 動態繪製菜單維護列表 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </section>
+
+        <!-- 後台子頁面 3: QR Code 生成器 -->
+        <section id="adminTab-qrcode" class="hidden">
+            <div class="bg-white p-8 rounded-xl shadow-sm border border-gray-200 max-w-lg mx-auto text-center space-y-6">
+                <div>
+                    <h3 class="text-xl font-bold text-gray-800">內部便當點餐 QR Code</h3>
+                    <p class="text-sm text-gray-500 mt-1">列印並貼於公告欄或茶水間，員工手機掃碼即可訂購便當</p>
+                </div>
+
+                <div class="flex justify-center p-4 bg-gray-50 rounded-xl border border-gray-200 w-fit mx-auto">
+                    <div id="qrcode"></div>
+                </div>
+
+                <div class="text-xs text-gray-400 break-all px-4" id="currentUrlText"></div>
+
+                <div class="flex space-x-3">
+                    <button onclick="window.print()" class="flex-1 bg-gray-800 hover:bg-gray-900 text-white py-2.5 rounded-lg text-sm font-medium transition flex items-center justify-center">
+                        <i class="fa-solid fa-print mr-2"></i> 列印此頁面
+                    </button>
+                </div>
+            </div>
+        </section>
+    </main>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 Modal 1: 餐點細節選擇 (參考梁社漢介面) -->
+    <!-- ========================================== -->
+    <div id="foodDetailModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full overflow-hidden shadow-2xl transform transition-all flex flex-col max-h-[90vh]">
+            <!-- 餐點大圖 -->
+            <div class="relative h-56 bg-gray-100 flex-shrink-0">
+                <img id="modalFoodImg" src="" alt="餐點圖片" class="w-full h-full object-cover">
+                <button onclick="closeFoodModal()" class="absolute top-3 right-3 bg-black/50 text-white w-8 h-8 rounded-full flex items-center justify-center hover:bg-black/70 transition">
+                    <i class="fa-solid fa-xmark"></i>
+                </button>
+            </div>
+
+            <div class="p-5 overflow-y-auto flex-grow space-y-4">
+                <div class="flex justify-between items-start">
+                    <h3 id="modalFoodTitle" class="text-2xl font-bold text-gray-900"></h3>
+                    <span id="modalFoodPrice" class="text-2xl font-extrabold text-gray-900"></span>
+                </div>
+
+                <!-- 數量選擇 -->
+                <div class="flex items-center justify-between border-y border-gray-100 py-3">
+                    <span class="text-sm font-bold text-gray-700">數量</span>
+                    <div class="flex items-center space-x-2">
+                        <button onclick="changeModalQty(-1)" class="w-8 h-8 rounded-full border border-gray-300 flex items-center justify-center text-gray-600 hover:bg-gray-100 font-bold text-lg">-</button>
+                        <input type="number" id="modalQtyInput" value="1" min="1" readonly class="w-12 text-center font-bold text-lg focus:outline-none">
+                        <button onclick="changeModalQty(1)" class="w-8 h-8 rounded-full bg-gray-900 text-white flex items-center justify-center hover:bg-gray-800 font-bold text-lg">+</button>
+                        <button onclick="addModalQty(5)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-2 py-1.5 rounded-md">+5</button>
+                        <button onclick="addModalQty(10)" class="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 font-semibold px-2 py-1.5 rounded-md">+10</button>
+                    </div>
+                </div>
+
+                <!-- 客製化選單 (例如: 不要飯, 飯少) -->
+                <div id="customOptionsWrapper" class="space-y-2">
+                    <label class="text-xs font-bold text-gray-500 uppercase tracking-wider">客製化需求</label>
+                    <div id="customOptionsGroup" class="flex flex-wrap gap-2">
+                        <!-- JS 動態建立客製化按鈕 -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- 彈窗底部小計與加入購物車按鈕 -->
+            <div class="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between gap-3">
+                <div>
+                    <span class="text-xs text-gray-500 block">小計</span>
+                    <span id="modalSubtotal" class="text-2xl font-extrabold text-orange-600">$0</span>
+                </div>
+                <div class="flex gap-2">
+                    <button onclick="closeFoodModal()" class="px-4 py-2.5 rounded-xl border border-gray-300 font-bold text-gray-600 hover:bg-gray-100 transition">取消</button>
+                    <button onclick="addToCartFromModal()" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md transition flex items-center">
+                        <i class="fa-solid fa-cart-plus mr-2"></i> 加入購物車
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 Modal 2: 購物車與結帳 Modal -->
+    <!-- ========================================== -->
+    <div id="cartModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-xl w-full overflow-hidden shadow-2xl flex flex-col max-h-[90vh]">
+            <div class="p-4 border-b border-gray-200 flex justify-between items-center bg-gray-50">
+                <h3 class="font-bold text-lg text-gray-800 flex items-center">
+                    <i class="fa-solid fa-cart-shopping text-orange-500 mr-2"></i> 購物車 (點餐確認)
+                </h3>
+                <button onclick="closeCartModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fa-solid fa-xmark text-xl"></i>
+                </button>
+            </div>
+
+            <!-- 購物車清單 -->
+            <div class="p-4 overflow-y-auto flex-grow space-y-3" id="cartListContainer">
+                <!-- JS 動態呈現購物車項目 -->
+            </div>
+
+            <!-- 員工資訊填寫 (結帳前) -->
+            <div class="p-4 bg-orange-50 border-t border-orange-100 space-y-3">
+                <h4 class="font-bold text-sm text-orange-900 flex items-center">
+                    <i class="fa-solid fa-user-tag mr-1.5"></i> 訂購員工資訊
+                </h4>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">員工工號 / 姓名 *</label>
+                        <input type="text" id="empName" placeholder="例: A1234 王小明" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-semibold text-gray-600 mb-1">所屬部門 *</label>
+                        <select id="empDept" class="w-full px-3 py-2 border border-gray-300 rounded-lg text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none bg-white">
+                            <option value="">請選擇部門</option>
+                            <option value="研發部">研發部</option>
+                            <option value="資訊部">資訊部</option>
+                            <option value="行政管理部">行政管理部</option>
+                            <option value="業務行銷部">業務行銷部</option>
+                            <option value="廠務生產部">廠務生產部</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部結帳區域 -->
+            <div class="p-4 bg-white border-t border-gray-200 flex items-center justify-between">
+                <div>
+                    <span class="text-xs text-gray-500 block">總計金額</span>
+                    <span id="cartTotal" class="text-2xl font-black text-red-600">$0</span>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="closeCartModal()" class="px-4 py-2.5 rounded-xl border border-gray-300 text-sm font-bold text-gray-600 hover:bg-gray-100 transition">繼續選購</button>
+                    <button onclick="submitOrder()" class="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white font-bold shadow-md text-sm transition flex items-center">
+                        <i class="fa-solid fa-paper-plane mr-2"></i> 去結帳送出
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- 彈窗 Modal 3: 後台維護餐點 Edit Modal -->
+    <div id="menuEditModal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-2xl max-w-md w-full p-6 space-y-4 shadow-2xl">
+            <h3 id="menuModalTitle" class="text-xl font-bold text-gray-800 border-b pb-2">新增便當品項</h3>
+            <input type="hidden" id="editFoodId">
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">便當名稱</label>
+                <input type="text" id="editFoodName" placeholder="例如: 炸雞腿便當" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">價格 (NT$)</label>
+                <input type="number" id="editFoodPrice" placeholder="120" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">圖片網址 (URL)</label>
+                <input type="text" id="editFoodImage" placeholder="https://..." class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            </div>
+            <div>
+                <label class="block text-xs font-semibold text-gray-600 mb-1">客製化選項 (用逗號分隔)</label>
+                <input type="text" id="editFoodCustom" placeholder="不要飯, 飯少, 加辣, 多加醬汁" class="w-full border border-gray-300 rounded-lg px-3 py-2 text-sm focus:ring-2 focus:ring-orange-500 focus:outline-none">
+            </div>
+            <div class="flex justify-end space-x-2 pt-2">
+                <button onclick="closeMenuEditModal()" class="px-4 py-2 rounded-lg border border-gray-300 text-sm font-bold text-gray-600 hover:bg-gray-100">取消</button>
+                <button onclick="saveMenuItem()" class="px-4 py-2 rounded-lg bg-orange-600 text-white text-sm font-bold hover:bg-orange-700 shadow">儲存</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 訊息提示 Toast / Notification -->
+    <div id="toast" class="fixed bottom-6 right-6 bg-slate-900 text-white px-5 py-3 rounded-xl shadow-2xl z-50 transform translate-y-20 opacity-0 transition-all duration-300 flex items-center space-x-2">
+        <i class="fa-solid fa-circle-check text-emerald-400 text-lg"></i>
+        <span id="toastMsg" class="text-sm font-medium"></span>
+    </div>
+
+    <!-- ========================================== -->
+    <!-- JavaScript Application Logic -->
+    <!-- ========================================== -->
+    <script>
+        // 1. 預設便當菜單資料庫 (純便當選項)
+        const DEFAULT_MENU = [
+            { id: 1, name: "炸雞腿便當", price: 135, image: "https://images.unsplash.com/photo-1562967914-608f82629710?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少", "加辣"] },
+            { id: 2, name: "炸排骨便當", price: 120, image: "https://images.unsplash.com/photo-1603073163308-9654c3fb70b5?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少", "多加醬汁"] },
+            { id: 3, name: "滷排骨便當", price: 120, image: "https://images.unsplash.com/photo-1541832676-9b763b0239ab?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少"] },
+            { id: 4, name: "椒麻雞便當", price: 145, image: "https://images.unsplash.com/photo-1626082927389-6cd097cdc6ec?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少", "大辣"] },
+            { id: 5, name: "爌肉便當", price: 110, image: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少", "瘦肉多"] },
+            { id: 6, name: "美國帶骨牛小排便當", price: 299, image: "https://images.unsplash.com/photo-1544025162-d76694265947?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少"] },
+            { id: 7, name: "黃金塔塔鱈魚排便當", price: 118, image: "https://images.unsplash.com/photo-1519708227418-c8fd9a32b7a2?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少"] },
+            { id: 8, name: "蒲燒鰻魚便當", price: 250, image: "https://images.unsplash.com/photo-1534422298391-e4f8c172dddb?auto=format&fit=crop&w=600&q=80", options: ["不要飯", "飯少"] }
+        ];
+
+        // 2. 全域狀態 State
+        let menuData = JSON.parse(localStorage.getItem('menuData')) || DEFAULT_MENU;
+        let ordersData = JSON.parse(localStorage.getItem('ordersData')) || [];
+        let cart = [];
+        let currentEditingFood = null;
+        let selectedCustomOption = "";
+
+        // 3. 初始化畫面
+        window.onload = function() {
+            renderMenu();
+            updateCartBadge();
+            generateQRCode();
+        };
+
+        // 切換前台 / 後台
+        function toggleMode() {
+            const userView = document.getElementById('userView');
+            const adminView = document.getElementById('adminView');
+            const modeText = document.getElementById('modeText');
+
+            if (userView.classList.contains('hidden')) {
+                userView.classList.remove('hidden');
+                adminView.classList.add('hidden');
+                modeText.innerText = "後台管理";
+            } else {
+                userView.classList.add('hidden');
+                adminView.classList.remove('hidden');
+                modeText.innerText = "回點餐頁";
+                renderAdminOrders();
+                renderAdminMenu();
+            }
+        }
+
+        // 渲染便當菜單網格
+        function renderMenu() {
+            const grid = document.getElementById('menuGrid');
+
+            if (menuData.length === 0) {
+                grid.innerHTML = `<div class="col-span-full text-center py-12 text-gray-400">目前尚無便當品項，請至後台新增</div>`;
+                return;
+            }
+
+            grid.innerHTML = menuData.map(item => `
+                <div onclick="openFoodModal(${item.id})" class="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-md transition-all cursor-pointer border border-gray-100 flex flex-col justify-between group">
+                    <div>
+                        <div class="relative h-44 overflow-hidden bg-gray-100">
+                            <img src="${item.image}" alt="${item.name}" 
+                                 onerror="this.src='https://placehold.co/600x400/f97316/ffffff?text=${encodeURIComponent(item.name)}'"
+                                 class="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300">
+                            <span class="absolute top-2 left-2 bg-orange-600 text-white text-xs px-2.5 py-1 rounded-full font-bold">
+                                精選便當
+                            </span>
+                        </div>
+                        <div class="p-3.5">
+                            <h3 class="font-bold text-gray-800 text-base line-clamp-1 group-hover:text-orange-600 transition-colors">${item.name}</h3>
+                        </div>
+                    </div>
+                    <div class="p-3.5 pt-0 flex justify-between items-center">
+                        <span class="text-xl font-extrabold text-gray-900">$${item.price}</span>
+                        <button class="bg-orange-100 group-hover:bg-orange-500 text-orange-600 group-hover:text-white px-3 py-1.5 rounded-lg text-xs font-bold transition-all">
+                            <i class="fa-solid fa-plus mr-1"></i>選購便當
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 打開餐點彈窗
+        function openFoodModal(id) {
+            currentEditingFood = menuData.find(item => item.id === id);
+            if (!currentEditingFood) return;
+
+            document.getElementById('modalFoodImg').src = currentEditingFood.image;
+            document.getElementById('modalFoodTitle').innerText = currentEditingFood.name;
+            document.getElementById('modalFoodPrice').innerText = `$${currentEditingFood.price}`;
+            document.getElementById('modalQtyInput').value = 1;
+            selectedCustomOption = "";
+
+            // 客製化按鈕繪製
+            const optsContainer = document.getElementById('customOptionsGroup');
+            const wrapper = document.getElementById('customOptionsWrapper');
+            
+            if (currentEditingFood.options && currentEditingFood.options.length > 0) {
+                wrapper.classList.remove('hidden');
+                optsContainer.innerHTML = currentEditingFood.options.map(opt => `
+                    <button type="button" onclick="selectCustomOption('${opt}', this)" 
+                            class="custom-opt-btn border border-gray-300 px-4 py-2 rounded-xl text-sm font-medium hover:border-orange-500 transition">
+                        ${opt}
+                    </button>
+                `).join('');
+            } else {
+                wrapper.classList.add('hidden');
+            }
+
+            updateModalSubtotal();
+            document.getElementById('foodDetailModal').classList.remove('hidden');
+        }
+
+        function closeFoodModal() {
+            document.getElementById('foodDetailModal').classList.add('hidden');
+        }
+
+        function selectCustomOption(opt, btn) {
+            document.querySelectorAll('.custom-opt-btn').forEach(b => {
+                b.classList.remove('bg-orange-600', 'text-white', 'border-orange-600');
+                b.classList.add('border-gray-300', 'text-gray-700');
+            });
+
+            if (selectedCustomOption === opt) {
+                selectedCustomOption = "";
+            } else {
+                selectedCustomOption = opt;
+                btn.classList.remove('border-gray-300', 'text-gray-700');
+                btn.classList.add('bg-orange-600', 'text-white', 'border-orange-600');
+            }
+        }
+
+        function changeModalQty(delta) {
+            const input = document.getElementById('modalQtyInput');
+            let val = parseInt(input.value) + delta;
+            if (val < 1) val = 1;
+            input.value = val;
+            updateModalSubtotal();
+        }
+
+        function addModalQty(add) {
+            const input = document.getElementById('modalQtyInput');
+            input.value = parseInt(input.value) + add;
+            updateModalSubtotal();
+        }
+
+        function updateModalSubtotal() {
+            const qty = parseInt(document.getElementById('modalQtyInput').value);
+            const subtotal = currentEditingFood.price * qty;
+            document.getElementById('modalSubtotal').innerText = `$${subtotal}`;
+        }
+
+        // 加入購物車
+        function addToCartFromModal() {
+            const qty = parseInt(document.getElementById('modalQtyInput').value);
+            const cartItem = {
+                cartId: Date.now(),
+                foodId: currentEditingFood.id,
+                name: currentEditingFood.name,
+                price: currentEditingFood.price,
+                qty: qty,
+                option: selectedCustomOption
+            };
+
+            cart.push(cartItem);
+            updateCartBadge();
+            closeFoodModal();
+            showToast(`已將 ${currentEditingFood.name} 加入購物車`);
+        }
+
+        function updateCartBadge() {
+            const badge = document.getElementById('cartBadge');
+            const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+            if (totalQty > 0) {
+                badge.innerText = totalQty;
+                badge.classList.remove('hidden');
+            } else {
+                badge.classList.add('hidden');
+            }
+        }
+
+        // 打開購物車
+        function openCartModal() {
+            renderCartList();
+            document.getElementById('cartModal').classList.remove('hidden');
+        }
+
+        function closeCartModal() {
+            document.getElementById('cartModal').classList.add('hidden');
+        }
+
+        // 渲染購物車清單
+        function renderCartList() {
+            const container = document.getElementById('cartListContainer');
+            if (cart.length === 0) {
+                container.innerHTML = `<div class="text-center py-10 text-gray-400">購物車目前是空的</div>`;
+                document.getElementById('cartTotal').innerText = "$0";
+                return;
+            }
+
+            let total = 0;
+            container.innerHTML = cart.map(item => {
+                const subtotal = item.price * item.qty;
+                total += subtotal;
+                return `
+                    <div class="flex justify-between items-center bg-gray-50 p-3 rounded-xl border border-gray-200">
+                        <div class="flex-1 pr-2">
+                            <h4 class="font-bold text-gray-800 text-sm">${item.name}</h4>
+                            <p class="text-xs text-gray-500">${item.option ? '客製: ' + item.option : '預設套餐'}</p>
+                            <span class="text-xs font-semibold text-orange-600">$${item.price} x ${item.qty}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <button onclick="updateCartItemQty(${item.cartId}, -1)" class="w-6 h-6 bg-red-500 text-white rounded-full flex items-center justify-center font-bold text-xs">-</button>
+                            <span class="font-bold text-sm">${item.qty}</span>
+                            <button onclick="updateCartItemQty(${item.cartId}, 1)" class="w-6 h-6 bg-emerald-500 text-white rounded-full flex items-center justify-center font-bold text-xs">+</button>
+                            <button onclick="removeCartItem(${item.cartId})" class="text-gray-400 hover:text-red-600 ml-2">
+                                <i class="fa-solid fa-trash-can"></i>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            document.getElementById('cartTotal').innerText = `$${total}`;
+        }
+
+        function updateCartItemQty(cartId, delta) {
+            const item = cart.find(i => i.cartId === cartId);
+            if (item) {
+                item.qty += delta;
+                if (item.qty <= 0) {
+                    cart = cart.filter(i => i.cartId !== cartId);
+                }
+            }
+            updateCartBadge();
+            renderCartList();
+        }
+
+        function removeCartItem(cartId) {
+            cart = cart.filter(i => i.cartId !== cartId);
+            updateCartBadge();
+            renderCartList();
+        }
+
+        // 提交結帳訂單
+        function submitOrder() {
+            if (cart.length === 0) {
+                showToast("購物車是空的，無法結帳");
+                return;
+            }
+
+            const empName = document.getElementById('empName').value.trim();
+            const empDept = document.getElementById('empDept').value;
+
+            if (!empName || !empDept) {
+                showToast("請填寫員工工號/姓名與部門！");
+                return;
+            }
+
+            const totalAmount = cart.reduce((sum, item) => sum + item.price * item.qty, 0);
+
+            const newOrder = {
+                orderId: "ORD" + Date.now().toString().slice(-6),
+                time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+                empName: empName,
+                empDept: empDept,
+                items: [...cart],
+                totalAmount: totalAmount
+            };
+
+            ordersData.unshift(newOrder);
+            localStorage.setItem('ordersData', JSON.stringify(ordersData));
+
+            // 清空購物車
+            cart = [];
+            updateCartBadge();
+            closeCartModal();
+            showToast("訂單已成功送出！前往後台可檢視匯總");
+        }
+
+        // ==========================================
+        // 後台邏輯與渲染 (Admin Logic)
+        // ==========================================
+
+        function switchAdminTab(tabName) {
+            ['orders', 'menu', 'qrcode'].forEach(t => {
+                document.getElementById(`adminTab-${t}`).classList.add('hidden');
+                document.getElementById(`tabBtn-${t}`).classList.remove('border-orange-500', 'text-orange-600');
+                document.getElementById(`tabBtn-${t}`).classList.add('border-transparent', 'text-gray-500');
+            });
+
+            document.getElementById(`adminTab-${tabName}`).classList.remove('hidden');
+            document.getElementById(`tabBtn-${tabName}`).classList.add('border-orange-500', 'text-orange-600');
+            document.getElementById(`tabBtn-${tabName}`).classList.remove('border-transparent', 'text-gray-500');
+
+            if (tabName === 'orders') renderAdminOrders();
+            if (tabName === 'menu') renderAdminMenu();
+        }
+
+        // 渲染今日訂單與統計
+        function renderAdminOrders() {
+            const tbody = document.getElementById('ordersTableBody');
+            const summaryContainer = document.getElementById('itemSummaryList');
+
+            let totalAmount = 0;
+            let totalItemsCount = 0;
+            const itemCounts = {};
+
+            tbody.innerHTML = ordersData.map(order => {
+                totalAmount += order.totalAmount;
+                
+                const itemDetails = order.items.map(i => {
+                    totalItemsCount += i.qty;
+                    // 統計各餐點數量
+                    const key = i.name + (i.option ? ` (${i.option})` : '');
+                    itemCounts[key] = (itemCounts[key] || 0) + i.qty;
+
+                    return `${i.name} x${i.qty} ${i.option ? '<span class="text-xs text-orange-600 bg-orange-50 px-1 rounded">[' + i.option + ']</span>' : ''}`;
+                }).join('<br>');
+
+                return `
+                    <tr class="hover:bg-gray-50">
+                        <td class="py-3 px-4 text-gray-500 font-mono">${order.time}</td>
+                        <td class="py-3 px-4 font-bold text-gray-800">${order.empName}</td>
+                        <td class="py-3 px-4"><span class="bg-gray-100 text-gray-700 px-2 py-0.5 rounded text-xs">${order.empDept}</span></td>
+                        <td class="py-3 px-4 text-gray-700">${itemDetails}</td>
+                        <td class="py-3 px-4 text-right font-extrabold text-gray-900">$${order.totalAmount}</td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 更新數據卡片
+            document.getElementById('statTotalOrders').innerText = `${ordersData.length} 筆`;
+            document.getElementById('statTotalAmount').innerText = `$${totalAmount}`;
+            document.getElementById('statTotalItems').innerText = `${totalItemsCount} 份`;
+
+            // 渲染熱門統計
+            summaryContainer.innerHTML = Object.keys(itemCounts).map(name => `
+                <div class="bg-orange-50 border border-orange-100 p-2.5 rounded-lg flex justify-between items-center">
+                    <span class="font-medium text-gray-800 truncate mr-2">${name}</span>
+                    <span class="font-bold text-orange-600 bg-white px-2 py-0.5 rounded shadow-sm text-xs">${itemCounts[name]} 份</span>
+                </div>
+            `).join('');
+
+            if (ordersData.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center py-8 text-gray-400">今日尚無員工訂單數據</td></tr>`;
+                summaryContainer.innerHTML = `<p class="text-xs text-gray-400 col-span-full">暫無數據</p>`;
+            }
+        }
+
+        function clearAllOrders() {
+            if (confirm("確定要清空今日所有訂單紀錄嗎？")) {
+                ordersData = [];
+                localStorage.removeItem('ordersData');
+                renderAdminOrders();
+                showToast("已清空所有訂單數據");
+            }
+        }
+
+        // 渲染後台菜單維護表格
+        function renderAdminMenu() {
+            const tbody = document.getElementById('adminMenuTableBody');
+            tbody.innerHTML = menuData.map(item => `
+                <tr class="hover:bg-gray-50">
+                    <td class="py-2.5 px-4">
+                        <img src="${item.image}" class="w-12 h-12 rounded-lg object-cover border" onerror="this.src='https://placehold.co/100?text=No+Img'">
+                    </td>
+                    <td class="py-2.5 px-4 font-bold text-gray-800">${item.name}</td>
+                    <td class="py-2.5 px-4 font-extrabold text-emerald-600">$${item.price}</td>
+                    <td class="py-2.5 px-4 text-xs text-gray-500">${item.options ? item.options.join(', ') : '-'}</td>
+                    <td class="py-2.5 px-4 text-center space-x-2">
+                        <button onclick="openMenuEditModal(${item.id})" class="text-blue-600 hover:text-blue-800 text-xs font-bold">編輯</button>
+                        <button onclick="deleteMenuItem(${item.id})" class="text-red-600 hover:text-red-800 text-xs font-bold">刪除</button>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function openMenuEditModal(id = null) {
+            if (id) {
+                const item = menuData.find(i => i.id === id);
+                document.getElementById('menuModalTitle').innerText = "編輯便當品項";
+                document.getElementById('editFoodId').value = item.id;
+                document.getElementById('editFoodName').value = item.name;
+                document.getElementById('editFoodPrice').value = item.price;
+                document.getElementById('editFoodImage').value = item.image;
+                document.getElementById('editFoodCustom').value = item.options ? item.options.join(', ') : '';
+            } else {
+                document.getElementById('menuModalTitle').innerText = "新增便當品項";
+                document.getElementById('editFoodId').value = "";
+                document.getElementById('editFoodName').value = "";
+                document.getElementById('editFoodPrice').value = "";
+                document.getElementById('editFoodImage').value = "";
+                document.getElementById('editFoodCustom').value = "不要飯, 飯少, 多加醬汁";
+            }
+            document.getElementById('menuEditModal').classList.remove('hidden');
+        }
+
+        function saveMenuItem() {
+            const id = document.getElementById('editFoodId').value;
+            const name = document.getElementById('editFoodName').value.trim();
+            const price = parseInt(document.getElementById('editFoodPrice').value);
+            const image = document.getElementById('editFoodImage').value.trim();
+            const customStr = document.getElementById('editFoodCustom').value.trim();
+
+            if (!name || isNaN(price)) {
+                showToast("請填寫完整的便當名稱與價格");
+                return;
+            }
+
+            const options = customStr ? customStr.split(',').map(s => s.trim()) : [];
+
+            if (id) {
+                // Update
+                const item = menuData.find(i => i.id == id);
+                item.name = name;
+                item.price = price;
+                item.image = image || 'https://placehold.co/600x400/f97316/ffffff?text=' + encodeURIComponent(name);
+                item.options = options;
+            } else {
+                // Create
+                const newItem = {
+                    id: Date.now(),
+                    name: name,
+                    price: price,
+                    image: image || 'https://placehold.co/600x400/f97316/ffffff?text=' + encodeURIComponent(name),
+                    options: options
+                };
+                menuData.push(newItem);
+            }
+
+            localStorage.setItem('menuData', JSON.stringify(menuData));
+            closeMenuEditModal();
+            renderAdminMenu();
+            renderMenu();
+            showToast("便當菜單資料已更新");
+        }
+
+        function openMenuEditModal(id = null) {
+            if (id) {
+                const item = menuData.find(i => i.id === id);
+                document.getElementById('menuModalTitle').innerText = "編輯餐點品項";
+                document.getElementById('editFoodId').value = item.id;
+                document.getElementById('editFoodName').value = item.name;
+                document.getElementById('editFoodCategory').value = item.category;
+                document.getElementById('editFoodPrice').value = item.price;
+                document.getElementById('editFoodImage').value = item.image;
+                document.getElementById('editFoodCustom').value = item.options ? item.options.join(', ') : '';
+            } else {
+                document.getElementById('menuModalTitle').innerText = "新增餐點品項";
+                document.getElementById('editFoodId').value = "";
+                document.getElementById('editFoodName').value = "";
+                document.getElementById('editFoodCategory').value = "飯類";
+                document.getElementById('editFoodPrice').value = "";
+                document.getElementById('editFoodImage').value = "";
+                document.getElementById('editFoodCustom').value = "不要飯, 飯少";
+            }
+            document.getElementById('menuEditModal').classList.remove('hidden');
+        }
+
+        function closeMenuEditModal() {
+            document.getElementById('menuEditModal').classList.add('hidden');
+        }
+
+        function saveMenuItem() {
+            const id = document.getElementById('editFoodId').value;
+            const name = document.getElementById('editFoodName').value.trim();
+            const category = document.getElementById('editFoodCategory').value;
+            const price = parseInt(document.getElementById('editFoodPrice').value);
+            const image = document.getElementById('editFoodImage').value.trim();
+            const customStr = document.getElementById('editFoodCustom').value.trim();
+
+            if (!name || isNaN(price)) {
+                showToast("請填寫完整的名稱與價格");
+                return;
+            }
+
+            const options = customStr ? customStr.split(',').map(s => s.trim()) : [];
+
+            if (id) {
+                // Update
+                const item = menuData.find(i => i.id == id);
+                item.name = name;
+                item.category = category;
+                item.price = price;
+                item.image = image || 'https://placehold.co/600x400/f97316/ffffff?text=' + encodeURIComponent(name);
+                item.options = options;
+            } else {
+                // Create
+                const newItem = {
+                    id: Date.now(),
+                    name: name,
+                    category: category,
+                    price: price,
+                    image: image || 'https://placehold.co/600x400/f97316/ffffff?text=' + encodeURIComponent(name),
+                    options: options
+                };
+                menuData.push(newItem);
+            }
+
+            localStorage.setItem('menuData', JSON.stringify(menuData));
+            closeMenuEditModal();
+            renderAdminMenu();
+            renderMenu();
+            showToast("菜單資料已更新");
+        }
+
+        function deleteMenuItem(id) {
+            if (confirm("確定要刪除此餐點品項嗎？")) {
+                menuData = menuData.filter(i => i.id !== id);
+                localStorage.setItem('menuData', JSON.stringify(menuData));
+                renderAdminMenu();
+                renderMenu();
+                showToast("已刪除餐點");
+            }
+        }
+
+        // 生成 QR Code
+        function generateQRCode() {
+            const currentUrl = window.location.href;
+            document.getElementById('currentUrlText').innerText = currentUrl;
+            document.getElementById("qrcode").innerHTML = ""; // 清空舊的 QR Code
+            new QRCode(document.getElementById("qrcode"), {
+                text: currentUrl,
+                width: 180,
+                height: 180,
+                colorDark: "#111827",
+                colorLight: "#ffffff",
+                correctLevel: QRCode.CorrectLevel.H
+            });
+        }
+
+        // Toast 彈出視窗
+        function showToast(msg) {
+            const toast = document.getElementById('toast');
+            document.getElementById('toastMsg').innerText = msg;
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            setTimeout(() => {
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 2500);
+        }
+    </script>
+</body>
+</html>
