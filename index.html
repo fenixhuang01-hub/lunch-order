@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>內部員工點餐系統（週一至五自動排程）</title>
+    <title>內部員工點餐系統（日期排程版）</title>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
     <style>
         :root {
@@ -48,7 +48,7 @@
         .form-control { width: 100%; padding: 8px 12px; border: 1px solid var(--border); border-radius: 6px; font-size: 0.95rem; }
         .btn { padding: 8px 16px; border: none; border-radius: 6px; cursor: pointer; font-weight: bold; }
         .btn-primary { background: var(--primary); color: white; }
-        .btn-danger { background: var(--primary); color: white; }
+        .btn-danger { background: #e63946; color: white; }
         table { width: 100%; border-collapse: collapse; margin-top: 10px; font-size: 0.9rem; }
         th, td { border: 1px solid var(--border); padding: 8px; text-align: left; }
         th { background: #f1f3f5; }
@@ -62,15 +62,16 @@
         <div class="header-btns">
             <button class="nav-btn" onclick="toggleView('user')">點餐頁面</button>
             <button class="nav-btn" onclick="openCartModal()">🛒 <span id="cartBadge" class="badge">0</span></button>
-            <button class="nav-btn" onclick="toggleView('admin')">後台管理</button>
+            <button class="nav-btn" onclick="toggleView('admin')">後台日曆排程</button>
         </div>
     </header>
 
     <div class="container">
+        <!-- 點餐頁面 -->
         <div id="userView">
             <div class="store-info">
-                <div class="store-title" id="currentStoreName">今日便當排程載入中...</div>
-                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;" id="todayScheduleDesc">系統將自動載入今日星期幾的預設排程便當</div>
+                <div class="store-title" id="currentStoreName">載入中...</div>
+                <div style="font-size: 0.85rem; color: #666; margin-top: 4px;" id="todayDateDesc">日期載入中</div>
             </div>
 
             <div class="menu-grid" id="menuGrid"></div>
@@ -84,22 +85,36 @@
             </div>
         </div>
 
+        <!-- 後台日曆排程維護 -->
         <div id="adminView" class="admin-section">
-            <h2>後台管理與一週排程預設</h2>
-            <br>
-            <h3>1. 週一至週五預設便當菜單總覽</h3>
-            <p style="font-size:0.85rem; color:#666; margin: 5px 0;">系統會根據員工點餐當天的星期（一~五），自動切換對應的菜單供同仁選購。</p>
-            <div id="weeklySchedulePreview" style="margin-top: 15px;"></div>
-            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+            <h2>📅 日曆式便當排程維護</h2>
+            <p style="font-size:0.85rem; color:#666; margin: 5px 0 15px 0;">您可以提前選定特定日期，安排當天的餐廳與便當菜單，同仁掃碼時會自動顯示當日排程！</p>
+            
+            <div style="background:#f8f9fa; padding:15px; border-radius:8px; margin-bottom:15px;">
+                <div class="form-group">
+                    <label><b>選擇要排程的日期：</b></label>
+                    <input type="date" id="scheduleDate" class="form-control" onchange="loadScheduleForDate()">
+                </div>
+                <div class="form-group">
+                    <label><b>當日餐廳/主題名稱：</b></label>
+                    <input type="text" id="scheduleStore" class="form-control" placeholder="例: 梁社漢排骨（林園店）">
+                </div>
+                <div class="form-group">
+                    <label><b>當日便當品項清單（格式：名稱, 價格, 圖片網址）：</b></label>
+                    <textarea id="scheduleItemsText" class="form-control" rows="5" placeholder="炸排骨便當, 120, https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300&#10;炸雞腿便當, 135, https://images.unsplash.com/photo-1562967914-608f82629710?w=300"></textarea>
+                    <small style="color:#666;">每行輸入一個便當，用逗號分隔「名稱、價格、圖片網址」。</small>
+                </div>
+                <button class="btn btn-primary" onclick="saveDateSchedule()">💾 儲存此日排程</button>
+            </div>
 
-            <h3>2. 今日訂單統計彙整</h3>
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+            <h3>📦 今日訂單統計彙整</h3>
             <button class="btn btn-danger" style="float:right; margin-bottom:10px;" onclick="clearTodayOrders()">清空今日訂單</button>
             <div id="summaryArea">無訂單資料</div>
+            
             <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
-
-            <h3>3. 點餐專屬 QR Code</h3>
+            <h3>🔗 點餐專屬 QR Code</h3>
             <div id="qrcode"></div>
-            <p style="text-align:center; font-size:0.85rem; color:#666;">印出此 QR Code 貼在辦公室，同仁掃描即可點選當日排程便當</p>
         </div>
     </div>
 
@@ -117,7 +132,11 @@
             
             <div style="margin-bottom:15px;">
                 <label style="font-weight:bold; font-size:0.9rem;">飯量/客製選項：</label><br>
-                <div id="modalOptions"></div>
+                <div id="modalOptions">
+                    <span class="opt-btn active" onclick="selectOpt(this, '正常')">正常</span>
+                    <span class="opt-btn" onclick="selectOpt(this, '飯少')">飯少</span>
+                    <span class="opt-btn" onclick="selectOpt(this, '不要飯')">不要飯</span>
+                </div>
             </div>
 
             <div class="qty-ctrl">
@@ -151,7 +170,7 @@
             </div>
 
             <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem; margin: 15px 0;">
-                <span>總計：</span>
+                <span>總計：預估金額</span>
                 <span id="cartModalTotal" style="color:var(--primary);">$0</span>
             </div>
 
@@ -160,82 +179,37 @@
     </div>
 
     <script>
-        // 週一至週五預設排程菜單
-        const weeklyMenu = {
-            1: { // 星期一
-                store: "周一特選：港式燒臘專賣",
-                items: [
-                    { name: "香腸化肉飯", price: 110, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "脆皮燒肉便當", price: 125, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "港式三寶飯", price: 130, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "油雞腿便當", price: 120, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300", opts: ["正常", "飯少", "不要飯"] }
-                ]
-            },
-            2: { // 星期二
-                store: "周二特選：經典排骨與雞腿",
-                items: [
-                    { name: "炸排骨便當", price: 120, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "炸雞腿便當", price: 135, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300", opts: ["正常", "飯少", "不要飯", "加辣"] },
-                    { name: "滷排骨便當", price: 120, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "椒麻雞便當", price: 145, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300", opts: ["正常", "飯少", "小辣", "大辣"] }
-                ]
-            },
-            3: { // 星期三
-                store: "周三特選：日式風味便當",
-                items: [
-                    { name: "蒲燒鰻魚飯", price: 180, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300", opts: ["正常", "飯少"] },
-                    { name: "日式唐揚雞便當", price: 130, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "黃金豬排便當", price: 125, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "牛五花丼飯", price: 140, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300", opts: ["正常", "飯少", "溫泉蛋"] }
-                ]
-            },
-            4: { // 星期四
-                store: "周四特選：在地古早味便當",
-                items: [
-                    { name: "招牌爌肉便當", price: 115, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300", opts: ["正常", "飯少", "肥肉多", "瘦肉多"] },
-                    { name: "瓜仔肉飯", price: 95, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300", opts: ["正常", "飯少"] },
-                    { name: "三杯雞便當", price: 130, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "香菇排骨酥飯", price: 125, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300", opts: ["正常", "飯少"] }
-                ]
-            },
-            5: { // 星期五
-                store: "周五犒賞：豪華特餐",
-                items: [
-                    { name: "美國帶骨牛小排飯", price: 299, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300", opts: ["正常", "飯少"] },
-                    { name: "泰式檸檬魚便當", price: 150, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300", opts: ["正常", "飯少", "酸辣適中"] },
-                    { name: "椒鹽雞排便當", price: 125, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300", opts: ["正常", "飯少", "不要飯"] },
-                    { name: "黑胡椒牛柳飯", price: 140, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300", opts: ["正常", "飯少"] }
-                ]
-            },
-            0: { // 假日預設顯示週一或休息提示
-                store: "週末假期 - 今日未開放點餐",
-                items: []
-            },
-            6: {
-                store: "週末假期 - 今日未開放點餐",
-                items: []
-            }
-        };
-
+        // 取得今天的 YYYY-MM-DD 格式
+        const todayStr = new Date().toISOString().split('T')[0];
+        
+        // 從 LocalStorage 載入排程與訂單
+        let schedules = JSON.parse(localStorage.getItem('lunch_schedules')) || {};
         let orders = JSON.parse(localStorage.getItem('lunch_orders')) || [];
         let cart = [];
         let currentItem = null;
         let currentQty = 1;
-        let selectedOpt = "";
+        let selectedOpt = "正常";
 
-        // 取得今天是星期幾 (1-5)
-        const todayDayOfWeek = new Date().getDay(); 
-        // 如果是假日(0或6)，預設顯示星期一的菜單預覽，或提示非營業日
-        const activeDay = (todayDayOfWeek >= 1 && todayDayOfWeek <= 5) ? todayDayOfWeek : 1;
-        const currentDayMenu = weeklyMenu[activeDay];
+        // 預設若該日無排程的預設便當
+        const defaultSchedule = {
+            store: "精選便當特約店",
+            items: [
+                { name: "炸排骨便當", price: 120, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300" },
+                { name: "炸雞腿便當", price: 135, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300" },
+                { name: "椒麻雞便當", price: 145, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300" },
+                { name: "爌肉便當", price: 115, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300" }
+            ]
+        };
+
+        // 取得今天實際應顯示的菜單
+        const activeSchedule = schedules[todayStr] || defaultSchedule;
 
         function init() {
-            document.getElementById('currentStoreName').innerText = currentDayMenu.store;
-            const dayNames = ["日", "一", "二", "三", "四", "五", "六"];
-            document.getElementById('todayScheduleDesc').innerText = `今天是星期${dayNames[todayDayOfWeek]}，已自動載入今日排程便當`;
-            
+            document.getElementById('currentStoreName').innerText = activeSchedule.store;
+            document.getElementById('todayDateDesc').innerText = `今天是 ${todayStr}，已自動載入今日排程便當`;
+            document.getElementById('scheduleDate').value = todayStr;
+            loadScheduleForDate();
             renderMenu();
-            renderAdminTable();
             renderSummary();
         }
 
@@ -244,7 +218,7 @@
                 document.getElementById('userView').style.display = 'none';
                 document.getElementById('cartBar').style.display = 'none';
                 document.getElementById('adminView').style.display = 'block';
-                document.getElementById('headerTitle').innerText = "點餐系統 - 後台與排程預覽";
+                document.getElementById('headerTitle').innerText = "點餐系統 - 日曆排程後台";
                 generateQRCode();
             } else {
                 document.getElementById('userView').style.display = 'block';
@@ -254,14 +228,52 @@
             }
         }
 
+        function loadScheduleForDate() {
+            const dateVal = document.getElementById('scheduleDate').value;
+            const target = schedules[dateVal] || defaultSchedule;
+            document.getElementById('scheduleStore').value = target.store;
+            
+            let textVal = target.items.map(i => `${i.name}, ${i.price}, ${i.img}`).join('\n');
+            document.getElementById('scheduleItemsText').value = textVal;
+        }
+
+        function saveDateSchedule() {
+            const dateVal = document.getElementById('scheduleDate').value;
+            const storeVal = document.getElementById('scheduleStore').value.trim();
+            const rawText = document.getElementById('scheduleItemsText').value.trim();
+
+            if (!dateVal || !storeVal) {
+                alert("請填寫日期與餐廳名稱！");
+                return;
+            }
+
+            let items = [];
+            const lines = rawText.split('\n');
+            lines.forEach(line => {
+                const parts = line.split(',');
+                if (parts.length >= 2) {
+                    items.push({
+                        name: parts[0].trim(),
+                        price: parseInt(parts[1].trim()) || 0,
+                        img: parts[2] ? parts[2].trim() : "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300"
+                    });
+                }
+            });
+
+            schedules[dateVal] = { store: storeVal, items: items };
+            localStorage.setItem('lunch_schedules', JSON.stringify(schedules));
+            alert(`成功儲存 ${dateVal} 的便當排程！`);
+            location.reload(); // 重新整理以更新今日畫面
+        }
+
         function renderMenu() {
             const grid = document.getElementById('menuGrid');
             grid.innerHTML = "";
-            if (currentDayMenu.items.length === 0) {
-                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center; padding:30px; color:#666;'>今天是週末假日，未開放點餐。您可以至後台檢視一週排程。</p>";
+            if (!activeSchedule.items || activeSchedule.items.length === 0) {
+                grid.innerHTML = "<p style='grid-column: 1/-1; text-align:center; padding:30px; color:#666;'>今日尚未安排便當排程。</p>";
                 return;
             }
-            currentDayMenu.items.forEach((item, index) => {
+            activeSchedule.items.forEach((item, index) => {
                 grid.innerHTML += `
                     <div class="menu-card" onclick="openItemModal(${index})">
                         <img src="${item.img}" class="menu-img" onerror="this.src='https://via.placeholder.com/150'">
@@ -275,22 +287,14 @@
         }
 
         function openItemModal(index) {
-            currentItem = currentDayMenu.items[index];
+            currentItem = activeSchedule.items[index];
             currentQty = 1;
-            selectedOpt = currentItem.opts ? currentItem.opts[0] : "";
+            selectedOpt = "正常";
             
             document.getElementById('modalTitle').innerText = currentItem.name;
             document.getElementById('modalPrice').innerText = '$' + currentItem.price;
             document.getElementById('modalImg').src = currentItem.img;
             document.getElementById('modalQty').innerText = currentQty;
-
-            const optsDiv = document.getElementById('modalOptions');
-            optsDiv.innerHTML = "";
-            if (currentItem.opts) {
-                currentItem.opts.forEach((opt, idx) => {
-                    optsDiv.innerHTML += `<span class="opt-btn ${idx === 0 ? 'active' : ''}" onclick="selectOpt(this, '${opt}')">${opt}</span>`;
-                });
-            }
             document.getElementById('itemModal').style.display = 'flex';
         }
 
@@ -326,7 +330,7 @@
             document.getElementById('cartBadge').innerText = totalQty;
             document.getElementById('cartTotalQty').innerText = totalQty;
             document.getElementById('cartTotalPrice').innerText = '$' + totalPrice;
-            document.getElementById('cartBar').style.display = (totalQty > 0 && currentDayMenu.items.length > 0) ? 'flex' : 'none';
+            document.getElementById('cartBar').style.display = totalQty > 0 ? 'flex' : 'none';
         }
 
         function openCartModal() {
@@ -367,6 +371,7 @@
 
             const order = {
                 id: Date.now(),
+                date: todayStr,
                 time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
                 name, dept,
                 items: [...cart],
@@ -387,8 +392,11 @@
 
         function renderSummary() {
             const area = document.getElementById('summaryArea');
-            if (orders.length === 0) {
-                area.innerHTML = "<p style='color:#888;'>今日尚無任何訂單紀錄</p>";
+            // 只篩選出今天的訂單
+            const todayOrders = orders.filter(o => o.date === todayStr);
+
+            if (todayOrders.length === 0) {
+                area.innerHTML = `<p style='color:#888;'>今日 (${todayStr}) 尚無任何訂單紀錄</p>`;
                 return;
             }
 
@@ -396,7 +404,7 @@
             let itemCounts = {};
             let grandTotal = 0;
 
-            orders.forEach(ord => {
+            todayOrders.forEach(ord => {
                 grandTotal += ord.total;
                 let details = ord.items.map(i => {
                     const key = `${i.name} (${i.opt})`;
@@ -407,7 +415,7 @@
             });
             summaryHtml += `</tbody></table>`;
 
-            let countHtml = `<h4>📦 今日餐點匯總統計：</h4><ul style="margin:10px 0 15px 20px;">`;
+            let countHtml = `<h4>📦 今日 (${todayStr}) 餐點總匯整：</h4><ul style="margin:10px 0 15px 20px;">`;
             for (let name in itemCounts) { countHtml += `<li><b>${name}</b>： ${itemCounts[name]} 份</li>`; }
             countHtml += `</ul><div style="font-size:1.1rem; font-weight:bold; color:var(--primary);">今日訂單總金額：$${grandTotal}</div><br>`;
 
@@ -415,25 +423,11 @@
         }
 
         function clearTodayOrders() {
-            if (confirm("確定要清空今天的訂單紀錄嗎？")) {
-                orders = [];
-                localStorage.removeItem('lunch_orders');
+            if (confirm(`確定要清空今天的訂單紀錄嗎？`)) {
+                orders = orders.filter(o => o.date !== todayStr);
+                localStorage.setItem('lunch_orders', JSON.stringify(orders));
                 renderSummary();
             }
-        }
-
-        function renderAdminTable() {
-            const preview = document.getElementById('weeklySchedulePreview');
-            const days = { 1: "星期一", 2: "星期二", 3: "星期三", 4: "星期四", 5: "星期五" };
-            let html = "";
-            for (let d in days) {
-                let s = weeklyMenu[d];
-                html += `<div style="margin-bottom:10px; padding:10px; background:#f9f9f9; border-radius:6px;">`;
-                html += `<b>${days[d]} - ${s.store}</b><br>`;
-                html += `<small style="color:#666;">品項：` + s.items.map(i => `${i.name} ($${i.price})`).join('、 ') + `</small>`;
-                html += `</div>`;
-            }
-            preview.innerHTML = html;
         }
 
         function generateQRCode() {
