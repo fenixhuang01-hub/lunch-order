@@ -1,0 +1,785 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>內部員工點餐系統</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <style>
+        :root {
+            --primary: #e63946;
+            --primary-dark: #c92a37;
+            --secondary: #f4a261;
+            --bg: #f8f9fa;
+            --card-bg: #ffffff;
+            --text: #2b2d42;
+            --border: #e9ecef;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+        }
+
+        body {
+            background-color: var(--bg);
+            color: var(--text);
+            padding-bottom: 80px;
+        }
+
+        header {
+            background: linear-gradient(135deg, var(--primary), var(--secondary));
+            color: white;
+            padding: 16px 20px;
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        header h1 {
+            font-size: 1.2rem;
+            font-weight: 700;
+        }
+
+        .header-btns {
+            display: flex;
+            gap: 10px;
+        }
+
+        .nav-btn {
+            background: rgba(255,255,255,0.2);
+            border: 1px solid rgba(255,255,255,0.4);
+            color: white;
+            padding: 6px 12px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-size: 0.85rem;
+            transition: all 0.2s;
+            position: relative;
+        }
+
+        .nav-btn:hover {
+            background: rgba(255,255,255,0.3);
+        }
+
+        .badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ffb703;
+            color: #000;
+            font-weight: bold;
+            font-size: 0.7rem;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 15px;
+        }
+
+        /* 餐廳資訊列 */
+        .store-info {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 12px;
+            margin-bottom: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.05);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+        }
+
+        .store-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            color: var(--primary);
+        }
+
+        /* 菜單列表 */
+        .menu-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+            gap: 15px;
+        }
+
+        .menu-card {
+            background: var(--card-bg);
+            border-radius: 12px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.06);
+            cursor: pointer;
+            transition: transform 0.2s;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .menu-card:active {
+            transform: scale(0.98);
+        }
+
+        .menu-img {
+            width: 100%;
+            height: 120px;
+            object-fit: cover;
+            background-color: #eee;
+        }
+
+        .menu-details {
+            padding: 10px;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .menu-name {
+            font-weight: bold;
+            font-size: 0.95rem;
+            margin-bottom: 5px;
+        }
+
+        .menu-price {
+            color: var(--primary);
+            font-weight: bold;
+            font-size: 1rem;
+        }
+
+        /* 浮動購物車條 */
+        .cart-bar {
+            position: fixed;
+            bottom: 15px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: calc(100% - 30px);
+            max-width: 770px;
+            background: var(--text);
+            color: white;
+            padding: 12px 20px;
+            border-radius: 30px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+            cursor: pointer;
+            z-index: 90;
+        }
+
+        .checkout-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 8px 18px;
+            border-radius: 20px;
+            font-weight: bold;
+            font-size: 0.9rem;
+        }
+
+        /* 彈窗 Modal */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+            justify-content: center;
+            align-items: flex-end;
+        }
+
+        .modal-content {
+            background: white;
+            width: 100%;
+            max-width: 600px;
+            border-radius: 20px 20px 0 0;
+            padding: 20px;
+            max-height: 85vh;
+            overflow-y: auto;
+            animation: slideUp 0.25s ease-out;
+        }
+
+        @keyframes slideUp {
+            from { transform: translateY(100%); }
+            to { transform: translateY(0); }
+        }
+
+        .modal-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+        }
+
+        .close-btn {
+            background: #eee;
+            border: none;
+            width: 30px;
+            height: 30px;
+            border-radius: 50%;
+            font-size: 1.1rem;
+            cursor: pointer;
+        }
+
+        .opt-btn {
+            display: inline-block;
+            border: 1px solid var(--border);
+            padding: 8px 16px;
+            border-radius: 8px;
+            margin: 5px 5px 5px 0;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+
+        .opt-btn.active {
+            border-color: var(--primary);
+            color: var(--primary);
+            background: #fff5f5;
+        }
+
+        .qty-ctrl {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .qty-btn {
+            width: 32px;
+            height: 32px;
+            border-radius: 50%;
+            border: 1px solid #ccc;
+            background: white;
+            font-size: 1.2rem;
+            cursor: pointer;
+        }
+
+        /* 後台管理頁面 */
+        .admin-section {
+            display: none;
+            background: white;
+            padding: 20px;
+            border-radius: 12px;
+            margin-top: 15px;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.05);
+        }
+
+        .form-group {
+            margin-bottom: 12px;
+        }
+
+        .form-group label {
+            display: block;
+            margin-bottom: 4px;
+            font-size: 0.85rem;
+            color: #555;
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 8px 12px;
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-size: 0.95rem;
+        }
+
+        .btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 6px;
+            cursor: pointer;
+            font-weight: bold;
+        }
+
+        .btn-primary { background: var(--primary); color: white; }
+        .btn-success { background: #2a9d8f; color: white; }
+        .btn-danger { background: #e63946; color: white; }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 10px;
+            font-size: 0.9rem;
+        }
+
+        th, td {
+            border: 1px solid var(--border);
+            padding: 8px;
+            text-align: left;
+        }
+
+        th { background: #f1f3f5; }
+        #qrcode { display: flex; justify-content: center; margin: 15px 0; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1 id="headerTitle">便當點餐系統</h1>
+        <div class="header-btns">
+            <button class="nav-btn" onclick="toggleView('user')">點餐頁面</button>
+            <button class="nav-btn" onclick="openCartModal()">🛒 <span id="cartBadge" class="badge">0</span></button>
+            <button class="nav-btn" onclick="toggleView('admin')">後台管理</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- 點餐 View -->
+        <div id="userView">
+            <div class="store-info">
+                <div>
+                    <div class="store-title" id="currentStoreName">精選便當專賣店</div>
+                    <div style="font-size: 0.8rem; color: #666;">今日內部外訂便當服務</div>
+                </div>
+            </div>
+
+            <div class="menu-grid" id="menuGrid"></div>
+
+            <div class="cart-bar" id="cartBar" onclick="openCartModal()" style="display:none;">
+                <div>已選 <span id="cartTotalQty">0</span> 份便當</div>
+                <div>
+                    <span style="margin-right: 15px; font-weight: bold; color: #ffb703;" id="cartTotalPrice">$0</span>
+                    <button class="checkout-btn">去結帳</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- 後台 View -->
+        <div id="adminView" class="admin-section">
+            <h2>後台管理與統計</h2>
+            <br>
+            <h3>1. 設定本日餐廳名稱</h3>
+            <div style="display:flex; gap:10px; margin: 10px 0;">
+                <input type="text" id="storeNameInput" class="form-control" placeholder="輸入餐廳名稱，如：梁社漢排骨">
+                <button class="btn btn-primary" onclick="saveStoreName()">儲存</button>
+            </div>
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+
+            <h3>2. 今日便當統計彙整</h3>
+            <button class="btn btn-danger" style="float:right; margin-bottom:10px;" onclick="clearTodayOrders()">清空今日訂單</button>
+            <div id="summaryArea">無訂單資料</div>
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+
+            <h3>3. 維護便當菜單</h3>
+            <button class="btn btn-success" style="margin: 10px 0;" onclick="openMenuEditModal()">+ 新增便當品項</button>
+            <table id="adminMenuTable">
+                <thead>
+                    <tr><th>圖片</th><th>便當名稱</th><th>價格</th><th>操作</th></tr>
+                </thead>
+                <tbody></tbody>
+            </table>
+            <hr style="margin:20px 0; border:0; border-top:1px solid #eee;">
+
+            <h3>4. 點餐專屬 QR Code</h3>
+            <div id="qrcode"></div>
+            <p style="text-align:center; font-size:0.85rem; color:#666;">印出此 QR Code 貼在辦公室，同仁即可掃碼點餐</p>
+        </div>
+    </div>
+
+    <!-- 選擇便當 Modal -->
+    <div class="modal" id="itemModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="modalTitle">便當名稱</h3>
+                <button class="close-btn" onclick="closeModal('itemModal')">&times;</button>
+            </div>
+            <div style="text-align:center; margin-bottom:10px;">
+                <img id="modalImg" src="" style="max-width:100%; height:150px; object-fit:cover; border-radius:8px;">
+            </div>
+            <div style="font-weight:bold; font-size:1.2rem; color:var(--primary); margin-bottom:10px;" id="modalPrice">$0</div>
+            
+            <div style="margin-bottom:15px;">
+                <label style="font-weight:bold; font-size:0.9rem;">飯量/客製選項：</label><br>
+                <div id="modalOptions"></div>
+            </div>
+
+            <div class="qty-ctrl">
+                <span>數量：</span>
+                <button class="qty-btn" onclick="changeQty(-1)">-</button>
+                <span id="modalQty" style="font-weight:bold;">1</span>
+                <button class="qty-btn" onclick="changeQty(1)">+</button>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%; padding:12px; margin-top:10px;" onclick="addToCart()">加入購物車</button>
+        </div>
+    </div>
+
+    <!-- 購物車 Modal -->
+    <div class="modal" id="cartModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>購物車清單</h3>
+                <button class="close-btn" onclick="closeModal('cartModal')">&times;</button>
+            </div>
+            <div id="cartItemsList"></div>
+            <hr style="margin: 15px 0; border:0; border-top:1px solid #eee;">
+            
+            <div class="form-group">
+                <label>姓名 / 工號（必填）：</label>
+                <input type="text" id="userName" class="form-control" placeholder="例: 王小明 / A1234">
+            </div>
+            <div class="form-group">
+                <label>部門（必填）：</label>
+                <input type="text" id="userDept" class="form-control" placeholder="例: 製造部 / 系統課">
+            </div>
+
+            <div style="display:flex; justify-content:space-between; font-weight:bold; font-size:1.1rem; margin: 15px 0;">
+                <span>總計：</span>
+                <span id="cartModalTotal" style="color:var(--primary);">$0</span>
+            </div>
+
+            <button class="btn btn-primary" style="width:100%; padding:12px;" onclick="submitOrder()">確認送出訂單</button>
+        </div>
+    </div>
+
+    <!-- 編輯菜單 Modal -->
+    <div class="modal" id="menuEditModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 id="editModalTitle">維護便當品項</h3>
+                <button class="close-btn" onclick="closeModal('menuEditModal')">&times;</button>
+            </div>
+            <input type="hidden" id="editIndex">
+            <div class="form-group">
+                <label>便當名稱：</label>
+                <input type="text" id="editName" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>價格：</label>
+                <input type="number" id="editPrice" class="form-control">
+            </div>
+            <div class="form-group">
+                <label>圖片網址：</label>
+                <input type="text" id="editImg" class="form-control" placeholder="https://...">
+            </div>
+            <div class="form-group">
+                <label>客製選項 (用半形逗號分隔)：</label>
+                <input type="text" id="editOpts" class="form-control" placeholder="正常, 飯少, 不要飯, 加辣">
+            </div>
+            <button class="btn btn-primary" style="width:100%; padding:10px; margin-top:10px;" onclick="saveMenuItem()">儲存變更</button>
+        </div>
+    </div>
+
+    <script>
+        // 預設菜單資料
+        const defaultMenu = [
+            { name: "炸排骨便當", price: 120, img: "https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=300", opts: ["正常", "飯少", "不要飯"] },
+            { name: "炸雞腿便當", price: 135, img: "https://images.unsplash.com/photo-1562967914-608f82629710?w=300", opts: ["正常", "飯少", "不要飯", "加辣"] },
+            { name: "椒麻雞便當", price: 145, img: "https://images.unsplash.com/photo-1569058242253-92a9c755a0ec?w=300", opts: ["正常", "飯少", "小辣", "大辣"] },
+            { name: "爌肉便當", price: 115, img: "https://images.unsplash.com/photo-1544025162-d76694265947?w=300", opts: ["正常", "飯少", "肥肉多", "瘦肉多"] }
+        ];
+
+        let menu = JSON.parse(localStorage.getItem('lunch_menu')) || defaultMenu;
+        let orders = JSON.parse(localStorage.getItem('lunch_orders')) || [];
+        let storeName = localStorage.getItem('lunch_store_name') || "精選便當專賣店";
+        let cart = [];
+        let currentItem = null;
+        let currentQty = 1;
+        let selectedOpt = "";
+
+        function init() {
+            document.getElementById('currentStoreName').innerText = storeName;
+            document.getElementById('storeNameInput').value = storeName;
+            renderMenu();
+            renderAdminTable();
+            renderSummary();
+        }
+
+        function toggleView(view) {
+            if (view === 'admin') {
+                document.getElementById('userView').style.display = 'none';
+                document.getElementById('cartBar').style.display = 'none';
+                document.getElementById('adminView').style.display = 'block';
+                document.getElementById('headerTitle').innerText = "點餐系統 - 後台管理";
+                generateQRCode();
+            } else {
+                document.getElementById('userView').style.display = 'block';
+                document.getElementById('adminView').style.display = 'none';
+                document.getElementById('headerTitle').innerText = "便當點餐系統";
+                updateCartBar();
+            }
+        }
+
+        function renderMenu() {
+            const grid = document.getElementById('menuGrid');
+            grid.innerHTML = "";
+            menu.forEach((item, index) => {
+                grid.innerHTML += `
+                    <div class="menu-card" onclick="openItemModal(${index})">
+                        <img src="${item.img}" class="menu-img" onerror="this.src='https://via.placeholder.com/150'">
+                        <div class="menu-details">
+                            <div class="menu-name">${item.name}</div>
+                            <div class="menu-price">$${item.price}</div>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openItemModal(index) {
+            currentItem = menu[index];
+            currentQty = 1;
+            selectedOpt = currentItem.opts ? currentItem.opts[0] : "";
+            
+            document.getElementById('modalTitle').innerText = currentItem.name;
+            document.getElementById('modalPrice').innerText = '$' + currentItem.price;
+            document.getElementById('modalImg').src = currentItem.img;
+            document.getElementById('modalQty').innerText = currentQty;
+
+            const optsDiv = document.getElementById('modalOptions');
+            optsDiv.innerHTML = "";
+            if (currentItem.opts) {
+                currentItem.opts.forEach((opt, idx) => {
+                    optsDiv.innerHTML += `<span class="opt-btn ${idx === 0 ? 'active' : ''}" onclick="selectOpt(this, '${opt}')">${opt}</span>`;
+                });
+            }
+            document.getElementById('itemModal').style.display = 'flex';
+        }
+
+        function selectOpt(el, opt) {
+            document.querySelectorAll('.opt-btn').forEach(btn => btn.classList.remove('active'));
+            el.classList.add('active');
+            selectedOpt = opt;
+        }
+
+        function changeQty(delta) {
+            if (currentQty + delta >= 1) {
+                currentQty += delta;
+                document.getElementById('modalQty').innerText = currentQty;
+            }
+        }
+
+        function addToCart() {
+            cart.push({
+                name: currentItem.name,
+                price: currentItem.price,
+                qty: currentQty,
+                opt: selectedOpt,
+                subtotal: currentItem.price * currentQty
+            });
+            closeModal('itemModal');
+            updateCartBar();
+        }
+
+        function updateCartBar() {
+            const totalQty = cart.reduce((sum, item) => sum + item.qty, 0);
+            const totalPrice = cart.reduce((sum, item) => sum + item.subtotal, 0);
+
+            document.getElementById('cartBadge').innerText = totalQty;
+            document.getElementById('cartTotalQty').innerText = totalQty;
+            document.getElementById('cartTotalPrice').innerText = '$' + totalPrice;
+
+            document.getElementById('cartBar').style.display = totalQty > 0 ? 'flex' : 'none';
+        }
+
+        function openCartModal() {
+            const container = document.getElementById('cartItemsList');
+            container.innerHTML = "";
+            if (cart.length === 0) {
+                container.innerHTML = "<p style='text-align:center; color:#888;'>購物車目前是空的</p>";
+            } else {
+                cart.forEach((item, idx) => {
+                    container.innerHTML += `
+                        <div style="display:flex; justify-style:space-between; align-items:center; margin-bottom:10px;">
+                            <div style="flex:1;">
+                                <div style="font-weight:bold;">${item.name} (${item.opt})</div>
+                                <div style="font-size:0.85rem; color:#666;">$${item.price} x ${item.qty}</div>
+                            </div>
+                            <div style="font-weight:bold; margin-right:10px;">$${item.subtotal}</div>
+                            <button class="btn btn-danger" style="padding:2px 8px;" onclick="removeFromCart(${idx})">刪除</button>
+                        </div>
+                    `;
+                });
+            }
+            const totalPrice = cart.reduce((sum, item) => sum + item.subtotal, 0);
+            document.getElementById('cartModalTotal').innerText = '$' + totalPrice;
+            document.getElementById('cartModal').style.display = 'flex';
+        }
+
+        function removeFromCart(index) {
+            cart.splice(index, 1);
+            openCartModal();
+            updateCartBar();
+        }
+
+        function submitOrder() {
+            const name = document.getElementById('userName').value.trim();
+            const dept = document.getElementById('userDept').value.trim();
+
+            if (!name || !dept) {
+                alert("請填寫姓名與部門，方便後台統計！");
+                return;
+            }
+            if (cart.length === 0) {
+                alert("購物車內無品項！");
+                return;
+            }
+
+            const order = {
+                id: Date.now(),
+                time: new Date().toLocaleTimeString('zh-TW', { hour: '2-digit', minute: '2-digit' }),
+                name,
+                dept,
+                items: [...cart],
+                total: cart.reduce((sum, item) => sum + item.subtotal, 0)
+            };
+
+            orders.push(order);
+            localStorage.setItem('lunch_orders', JSON.stringify(orders));
+
+            cart = [];
+            updateCartBar();
+            closeModal('cartModal');
+            alert("訂單已順利送出！感謝訂購。");
+            renderSummary();
+        }
+
+        function closeModal(id) {
+            document.getElementById(id).style.display = 'none';
+        }
+
+        // 後台邏輯
+        function saveStoreName() {
+            storeName = document.getElementById('storeNameInput').value;
+            localStorage.setItem('lunch_store_name', storeName);
+            document.getElementById('currentStoreName').innerText = storeName;
+            alert("餐廳名稱已更新！");
+        }
+
+        function renderSummary() {
+            const area = document.getElementById('summaryArea');
+            if (orders.length === 0) {
+                area.innerHTML = "<p style='color:#888;'>今日尚無任何訂單紀錄</p>";
+                return;
+            }
+
+            let summaryHtml = `<table><thead><tr><th>訂購者/部門</th><th>點餐明細</th><th>總金額</th><th>時間</th></tr></thead><tbody>`;
+            let itemCounts = {};
+            let grandTotal = 0;
+
+            orders.forEach(ord => {
+                grandTotal += ord.total;
+                let details = ord.items.map(i => {
+                    const key = `${i.name} (${i.opt})`;
+                    itemCounts[key] = (itemCounts[key] || 0) + i.qty;
+                    return `${i.name} [${i.opt}] x${i.qty}`;
+                }).join('<br>');
+
+                summaryHtml += `<tr><td><b>${ord.name}</b><br><small>${ord.dept}</small></td><td>${details}</td><td>$${ord.total}</td><td>${ord.time}</td></tr>`;
+            });
+            summaryHtml += `</tbody></table>`;
+
+            let countHtml = `<h4>📦 今日餐點匯總統計：</h4><ul style="margin:10px 0 15px 20px;">`;
+            for (let name in itemCounts) {
+                countHtml += `<li><b>${name}</b>： ${itemCounts[name]} 份</li>`;
+            }
+            countHtml += `</ul><div style="font-size:1.1rem; font-weight:bold; color:var(--primary);">今日訂單總金額：$${grandTotal}</div><br>`;
+
+            area.innerHTML = countHtml + summaryHtml;
+        }
+
+        function clearTodayOrders() {
+            if (confirm("確定要清空今天的訂單紀錄嗎？")) {
+                orders = [];
+                localStorage.removeItem('lunch_orders');
+                renderSummary();
+            }
+        }
+
+        function renderAdminTable() {
+            const tbody = document.querySelector('#adminMenuTable tbody');
+            tbody.innerHTML = "";
+            menu.forEach((item, idx) => {
+                tbody.innerHTML += `
+                    <tr>
+                        <td><img src="${item.img}" width="40" height="40" style="object-fit:cover; border-radius:4px;"></td>
+                        <td>${item.name}</td>
+                        <td>$${item.price}</td>
+                        <td>
+                            <button class="btn btn-primary" style="padding:2px 8px;" onclick="openMenuEditModal(${idx})">編輯</button>
+                            <button class="btn btn-danger" style="padding:2px 8px;" onclick="deleteMenuItem(${idx})">刪除</button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function openMenuEditModal(index = -1) {
+            document.getElementById('editIndex').value = index;
+            if (index >= 0) {
+                const item = menu[index];
+                document.getElementById('editModalTitle').innerText = "編輯便當品項";
+                document.getElementById('editName').value = item.name;
+                document.getElementById('editPrice').value = item.price;
+                document.getElementById('editImg').value = item.img;
+                document.getElementById('editOpts').value = item.opts ? item.opts.join(', ') : "";
+            } else {
+                document.getElementById('editModalTitle').innerText = "新增便當品項";
+                document.getElementById('editName').value = "";
+                document.getElementById('editPrice').value = "";
+                document.getElementById('editImg').value = "";
+                document.getElementById('editOpts').value = "正常, 飯少, 不要飯";
+            }
+            document.getElementById('menuEditModal').style.display = 'flex';
+        }
+
+        function saveMenuItem() {
+            const idx = parseInt(document.getElementById('editIndex').value);
+            const name = document.getElementById('editName').value.trim();
+            const price = parseInt(document.getElementById('editPrice').value);
+            const img = document.getElementById('editImg').value.trim() || 'https://via.placeholder.com/150';
+            const optsStr = document.getElementById('editOpts').value.trim();
+            const opts = optsStr ? optsStr.split(',').map(s => s.trim()) : [];
+
+            if (!name || isNaN(price)) {
+                alert("請輸入正確的名稱與價格！");
+                return;
+            }
+
+            const itemData = { name, price, img, opts };
+
+            if (idx >= 0) {
+                menu[idx] = itemData;
+            } else {
+                menu.push(itemData);
+            }
+
+            localStorage.setItem('lunch_menu', JSON.stringify(menu));
+            renderMenu();
+            renderAdminTable();
+            closeModal('menuEditModal');
+        }
+
+        function deleteMenuItem(index) {
+            if (confirm("確定要刪除此便當品項嗎？")) {
+                menu.splice(index, 1);
+                localStorage.setItem('lunch_menu', JSON.stringify(menu));
+                renderMenu();
+                renderAdminTable();
+            }
+        }
+
+        function generateQRCode() {
+            const qrcodeDiv = document.getElementById('qrcode');
+            qrcodeDiv.innerHTML = "";
+            new QRCode(qrcodeDiv, {
+                text: window.location.href,
+                width: 160,
+                height: 160
+            });
+        }
+
+        init();
+    </script>
+</body>
+</html>
